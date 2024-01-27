@@ -2,7 +2,8 @@
 #include <Adafruit_ThinkInk.h>
 #include <ESP8266WiFi.h>
 #include <Wire.h>   
-#include <BME280_t.h>   
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BMP085_U.h>
 
 #define SRAM_CS   16
 #define EPD_CS    0
@@ -21,7 +22,7 @@ ThinkInk_290_Grayscale4_T5 display(EPD_DC, EPD_RESET, EPD_CS, SRAM_CS, EPD_BUSY)
 #define COLOUR3 EPD_LIGHT
 #define COLOUR4 EPD_WHITE
 
-BME280<> BMESensor;   
+Adafruit_BMP085_Unified bmp = Adafruit_BMP085_Unified(10085);  
 
 
 void setup() {
@@ -30,8 +31,8 @@ void setup() {
   while (!Serial) {
     delay(10);
   }
-  Wire.begin(4, 5);  
-  BMESensor.begin();  
+  Wire.begin(4, 5);   
+  bmp.begin();
   display.begin(THINKINK_GRAYSCALE4);
 }
 
@@ -42,28 +43,31 @@ float low = 100;
 
 void loop() {
   
-  BMESensor.refresh();
+  sensors_event_t event;
+  bmp.getEvent(&event);
+  float temperature;
+  bmp.getTemperature(&temperature);
   Serial.println("Starting");
   Serial.print("Temperature: ");
-  Serial.print(BMESensor.temperature);
+  Serial.print(temperature);
   Serial.println("C");
   
-  readings[i] = BMESensor.temperature;
+  readings[i] = temperature;
   i++;
   float sum = 0;
   int count = 0;
-  if (BMESensor.temperature > high) {
-    high = BMESensor.temperature;
+  if (temperature > high) {
+    high = temperature;
   }
-  if (BMESensor.temperature < low) {
-    low = BMESensor.temperature;
+  if (temperature < low) {
+    low = temperature;
   }
 
   for (int j = 0; j <= 20; j++) {
     if (readings[j] == 100.0) {
       break;
     }
-    sum = sum + BMESensor.temperature;
+    sum = sum + temperature;
     count++;
   }
   float average = sum/count;
@@ -78,7 +82,7 @@ void loop() {
   display.setTextWrap(true);
   display.setCursor(55, 30);
   display.setTextSize(5);
-  display.print(String(BMESensor.temperature) + "C");
+  display.print(String(temperature) + "C");
 
   // print low and high
   display.setTextColor(EPD_DARK);
